@@ -2,7 +2,15 @@
 
 AI workflow automation system. Portfolio piece showing a production-style LLM pipeline with structured outputs, validation, prompt versioning, human-in-the-loop review, and a simulated CRM.
 
+![FlowForge AI dashboard](docs/screenshots/dashboard.png)
+
 > **Portfolio demo.** Runs in mock-AI mode by default — no live LLM calls, no API keys required. The structure mirrors a real production pipeline so swapping in OpenAI / Anthropic is a small change in `lib/`.
+
+## Screenshots
+
+| Workflow builder | Human-in-the-loop review |
+| --- | --- |
+| ![8-step workflow builder](docs/screenshots/workflow-builder.png) | ![Output review queue](docs/screenshots/output-review.png) |
 
 ## What's in here
 
