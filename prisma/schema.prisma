@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  role      String   // ADMIN | OPERATOR | VIEWER
+  createdAt DateTime @default(now())
+
+  reviews     Review[]
+  runsCreated AutomationRun[]
+}
+
+model Workflow {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  status      String         @default("ACTIVE") // ACTIVE | PAUSED | DRAFT
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  steps       WorkflowStep[]
+  runs        AutomationRun[]
+}
+
+model WorkflowStep {
+  id          String   @id @default(cuid())
+  workflowId  String
+  name        String
+  type        String   // INPUT | PREPROCESS | AI_PROMPT | VALIDATE | SCORE | HUMAN_REVIEW | API_ACTION | EXPORT
+  description String?
+  order       Int      @default(0)
+  config      String?
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+}
+
+model AutomationRun {
+  id              String   @id @default(cuid())
+  workflowId      String
+  sourceType      String   // FORM | EMAIL | CHAT | TICKET | MANUAL
+  inputText       String
+  cleanedInput    String?
+  status          String   @default("QUEUED") // QUEUED | RUNNING | NEEDS_REVIEW | APPROVED | REJECTED | FAILED | DONE
+  model           String   @default("gpt-4o-mini")
+  processingMs    Int      @default(0)
+  confidence      Float    @default(0)
+  createdById     String?
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  workflow        Workflow  @relation(fields: [workflowId], references: [id])
+  createdBy       User?     @relation(fields: [createdById], references: [id])
+  output          AIOutput?
+  review          Review?
+  lead            CRMLead?
+  logs            AutomationLog[]
+}
+
+model AIOutput {
+  id                  String   @id @default(cuid())
+  automationRunId     String   @unique
+  rawOutput           String
+  parsedOutput        String
+  summary             String
+  recommendedAction   String
+  replyDraft          String
+  validationStatus    String   @default("VALID")
+  validationIssues    String?
+  createdAt           DateTime @default(now())
+
+  automationRun       AutomationRun @relation(fields: [automationRunId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id              String   @id @default(cuid())
+  automationRunId String   @unique
+  reviewerId      String
+  decision        String   // APPROVED | REJECTED | EDITED
+  editedOutput    String?
+  notes           String?
+  reviewedAt      DateTime @default(now())
+
+  automationRun   AutomationRun @relation(fields: [automationRunId], references: [id], onDelete: Cascade)
+  reviewer        User           @relation(fields: [reviewerId], references: [id])
+}
+
+model CRMLead {
+  id              String   @id @default(cuid())
+  automationRunId String   @unique
+  name            String?
+  email           String?
+  company         String?
+  industry        String?
+  serviceNeeded   String
+  budget          String?
+  timeline        String?
+  priority        String   @default("MEDIUM") // LOW | MEDIUM | HIGH
+  leadScore       Int      @default(50)
+  status          String   @default("NEW") // NEW | QUALIFIED | CONTACTED | DISCOVERY | PROPOSAL | WON | LOST
+  source          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  automationRun   AutomationRun @relation(fields: [automationRunId], references: [id], onDelete: Cascade)
+}
+
+model PromptTemplate {
+  id            String   @id @default(cuid())
+  name          String
+  purpose       String
+  systemPrompt  String
+  userPrompt    String
+  outputSchema  String
+  model         String   @default("gpt-4o-mini")
+  temperature   Float    @default(0.2)
+  status        String   @default("ACTIVE") // ACTIVE | DRAFT | DEPRECATED
+  version       Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AutomationLog {
+  id              String   @id @default(cuid())
+  automationRunId String
+  level           String   // INFO | WARN | ERROR | SUCCESS
+  message         String
+  metadata        String?
+  createdAt       DateTime @default(now())
+
+  automationRun   AutomationRun @relation(fields: [automationRunId], references: [id], onDelete: Cascade)
+}
